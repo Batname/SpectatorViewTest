@@ -11,6 +11,7 @@
 #include "Runtime/Renderer/Private/SceneRendering.h"
 #include "Runtime/Renderer/Private/PostProcess/PostProcessHMD.h"
 
+
 //---------------------------------------------------
 // SimpleHMD Plugin Implementation
 //---------------------------------------------------
@@ -26,12 +27,12 @@ class FSimpleHMDPlugin : public ISimpleHMDPlugin
 	}
 };
 
-IMPLEMENT_MODULE( FSimpleHMDPlugin, SimpleHMD )
+IMPLEMENT_MODULE(FSimpleHMDPlugin, SimpleHMD)
 
 TSharedPtr< class IHeadMountedDisplay, ESPMode::ThreadSafe > FSimpleHMDPlugin::CreateHeadMountedDisplay()
 {
-	TSharedPtr< FSimpleHMD, ESPMode::ThreadSafe > SimpleHMD( new FSimpleHMD() );
-	if( SimpleHMD->IsInitialized() )
+	TSharedPtr< FSimpleHMD, ESPMode::ThreadSafe > SimpleHMD(new FSimpleHMD());
+	if (SimpleHMD->IsInitialized())
 	{
 		return SimpleHMD;
 	}
@@ -251,29 +252,19 @@ void FSimpleHMD::DrawDistortionMesh_RenderThread(struct FRenderingCompositePassC
 		sizeof(Indices[0]), &Verts, sizeof(Verts[0]));
 }
 
-bool FSimpleHMD::HasHiddenAreaMesh() const
+bool FSimpleHMD::OnStartGameFrame(FWorldContext& WorldContext)
 {
-	if (IsInRenderingThread())
+	if (CustomPresent)
 	{
-		if (ShouldDisableHiddenAndVisibileAreaMeshForSpectatorScreen_RenderThread())
-		{
-			return false;
-		}
+		CustomPresent->UpdateRenderingViewportList();
 	}
+
 
 	return true;
 }
 
-bool FSimpleHMD::HasVisibleAreaMesh() const
+bool FSimpleHMD::OnEndGameFrame(FWorldContext& WorldContext)
 {
-	if (IsInRenderingThread())
-	{
-		if (ShouldDisableHiddenAndVisibileAreaMeshForSpectatorScreen_RenderThread())
-		{
-			return false;
-		}
-	}
-
 	return true;
 }
 
@@ -290,7 +281,7 @@ bool FSimpleHMD::EnableStereo(bool stereo)
 void FSimpleHMD::AdjustViewRect(EStereoscopicPass StereoPass, int32& X, int32& Y, uint32& SizeX, uint32& SizeY) const
 {
 	SizeX = SizeX / 2;
-	if( StereoPass == eSSP_RIGHT_EYE )
+	if (StereoPass == eSSP_RIGHT_EYE)
 	{
 		X += SizeX;
 	}
@@ -298,11 +289,11 @@ void FSimpleHMD::AdjustViewRect(EStereoscopicPass StereoPass, int32& X, int32& Y
 
 void FSimpleHMD::CalculateStereoViewOffset(const enum EStereoscopicPass StereoPassType, const FRotator& ViewRotation, const float WorldToMeters, FVector& ViewLocation)
 {
-	if( StereoPassType != eSSP_FULL)
+	if (StereoPassType != eSSP_FULL)
 	{
 		float EyeOffset = 3.20000005f;
 		const float PassOffset = (StereoPassType == eSSP_LEFT_EYE) ? EyeOffset : -EyeOffset;
-		ViewLocation += ViewRotation.Quaternion().RotateVector(FVector(0,PassOffset,0));
+		ViewLocation += ViewRotation.Quaternion().RotateVector(FVector(0, PassOffset, 0));
 	}
 }
 
@@ -319,12 +310,12 @@ FMatrix FSimpleHMD::GetStereoProjectionMatrix(const enum EStereoscopicPass Stere
 
 	const float InNearZ = GNearClippingPlane;
 	return FMatrix(
-		FPlane(XS,                      0.0f,								    0.0f,							0.0f),
-		FPlane(0.0f,					YS,	                                    0.0f,							0.0f),
-		FPlane(0.0f,	                0.0f,								    0.0f,							1.0f),
-		FPlane(0.0f,					0.0f,								    InNearZ,						0.0f))
+		FPlane(XS, 0.0f, 0.0f, 0.0f),
+		FPlane(0.0f, YS, 0.0f, 0.0f),
+		FPlane(0.0f, 0.0f, 0.0f, 1.0f),
+		FPlane(0.0f, 0.0f, InNearZ, 0.0f))
 
-		* FTranslationMatrix(FVector(PassProjectionOffset,0,0));
+		* FTranslationMatrix(FVector(PassProjectionOffset, 0, 0));
 }
 
 void FSimpleHMD::InitCanvasFromView(FSceneView* InView, UCanvas* Canvas)
@@ -337,49 +328,16 @@ void FSimpleHMD::GetEyeRenderParams_RenderThread(const FRenderingCompositePassCo
 	EyeToSrcUVScaleValue = FVector2D(1.0f, 1.0f);
 }
 
-void FSimpleHMD::CalculateRenderTargetSize(const FViewport& Viewport, uint32& InOutSizeX, uint32& InOutSizeY)
+void FSimpleHMD::UpdateViewport(bool bUseSeparateRenderTarget, const class FViewport& InViewport, class SViewport* ViewportWidget)
 {
-	InOutSizeX = 500;
-	InOutSizeY = 500;
-}
+	FRHIViewport* const ViewportRHI = InViewport.GetViewportRHI().GetReference();
 
-bool FSimpleHMD::NeedReAllocateViewportRenderTarget(const FViewport& Viewport)
-{
-	//check(GRenderingThread && !GIsRenderingThreadSuspended);
-	UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::NeedReAllocateViewportRenderTarget"));
-
-
-	FIntPoint ViewportSize = Viewport.GetSizeXY();
-	const FIntPoint RenderTargetSize = Viewport.GetRenderTargetTextureSizeXY();
-
-	uint32 NewSizeX = ViewportSize.X;
-	uint32 NewSizeY = ViewportSize.Y;
-	CalculateRenderTargetSize(Viewport, NewSizeX, NewSizeY);
-
-	return (NewSizeX != RenderTargetSize.X || NewSizeY != RenderTargetSize.Y);
-}
-
-bool FSimpleHMD::ShouldUseSeparateRenderTarget() const
-{
-	//check(GRenderingThread && !GIsRenderingThreadSuspended);
-
-	return true;
-}
-
-void FSimpleHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FRHITexture2D* BackBuffer, FRHITexture2D* SrcTexture) const
-{
-	if (SpectatorScreenController)
+	if (CustomPresent)
 	{
-		SpectatorScreenController->RenderSpectatorScreen_RenderThread(RHICmdList, BackBuffer, SrcTexture);
+		CustomPresent->UpdateViewport(InViewport, ViewportRHI);
+		UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::UpdateViewport"));
+
 	}
-}
-
-bool FSimpleHMD::AllocateRenderTargetTexture(uint32 Index, uint32 SizeX, uint32 SizeY, uint8 Format, uint32 NumMips, uint32 InTexFlags, uint32 InTargetableTextureFlags, FTexture2DRHIRef& OutTargetableTexture, FTexture2DRHIRef& OutShaderResourceTexture, uint32 NumSamples)
-{
-	// Only called when RenderThread is suspended.  Both of these checks should pass.
-	//check(GRenderingThread && !GIsRenderingThreadSuspended);
-
-	return false;
 }
 
 
@@ -394,25 +352,38 @@ void FSimpleHMD::SetupViewFamily(FSceneViewFamily& InViewFamily)
 
 void FSimpleHMD::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView)
 {
-	InView.BaseHmdOrientation = FQuat(FRotator(0.0f,0.0f,0.0f));
+	InView.BaseHmdOrientation = FQuat(FRotator(0.0f, 0.0f, 0.0f));
 	InView.BaseHmdLocation = FVector(0.f);
-//	WorldToMetersScale = InView.WorldToMetersScale;
+	//	WorldToMetersScale = InView.WorldToMetersScale;
 	InViewFamily.bUseSeparateRenderTarget = false;
+}
+
+void FSimpleHMD::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
+{
+	if (CustomPresent)
+	{
+		CustomPresent->UpdateRenderingPose();
+		UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::BeginRenderViewFamily"));
+
+
+	}
 }
 
 void FSimpleHMD::PreRenderView_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneView& InView)
 {
 	check(IsInRenderingThread());
-
-	if (SpectatorScreenController)
-	{
-		SpectatorScreenController->UpdateSpectatorScreenMode_RenderThread();
-	}
 }
 
 void FSimpleHMD::PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& ViewFamily)
 {
 	check(IsInRenderingThread());
+
+	if (CustomPresent)
+	{
+		CustomPresent->BeginRendering();
+		UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::PreRenderViewFamily_RenderThread"));
+
+	}
 }
 
 FSimpleHMD::FSimpleHMD() :
@@ -420,54 +391,25 @@ FSimpleHMD::FSimpleHMD() :
 	LastHmdOrientation(FQuat::Identity),
 	DeltaControlRotation(FRotator::ZeroRotator),
 	DeltaControlOrientation(FQuat::Identity),
-	LastSensorTime(-1.0)
+	LastSensorTime(-1.0),
+	CustomPresent(nullptr)
 {
+
+	CustomPresent = new FSimpleHMDCustomPresent(this);
+
+	UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::FSimpleHMD"));
 }
 
 FSimpleHMD::~FSimpleHMD()
 {
+	if (CustomPresent)
+	{
+		CustomPresent->Shutdown();
+		CustomPresent = nullptr;
+	}
 }
 
 bool FSimpleHMD::IsInitialized()
 {
-	CreateSpectatorScreenController();
-
-
-	UE_LOG(LogTemp, Warning, TEXT(">> FSimpleHMD::IsInitialized()"));
-
 	return true;
-}
-
-uint32 FSimpleHMD::CreateLayer(const IStereoLayers::FLayerDesc& InLayerDesc)
-{
-	return 1;
-}
-
-void FSimpleHMD::DestroyLayer(uint32 LayerId)
-{
-
-}
-
-
-void FSimpleHMD::SetLayerDesc(uint32 LayerId, const IStereoLayers::FLayerDesc& InLayerDesc)
-{
-
-}
-
-
-bool FSimpleHMD::GetLayerDesc(uint32 LayerId, IStereoLayers::FLayerDesc& OutLayerDesc)
-{
-	return true;
-}
-
-
-void FSimpleHMD::MarkTextureForUpdate(uint32 LayerId)
-{
-
-}
-
-
-void FSimpleHMD::UpdateSplashScreen()
-{
-
 }

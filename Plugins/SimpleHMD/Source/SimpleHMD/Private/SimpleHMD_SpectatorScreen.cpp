@@ -12,8 +12,6 @@ public:
 
 	void RenderSpectatorScreen_RenderThread(FRHICommandListImmediate& RHICmdList, FRHITexture2D* BackBuffer, FTexture2DRHIRef SrcTexture) const
 	{
-		UE_LOG(LogTemp, Warning, TEXT("FSimpleSpectatorScreenController::RenderSpectatorScreen_RenderThread()"));
-
 		FDefaultSpectatorScreenController::RenderSpectatorScreen_RenderThread(RHICmdList, BackBuffer, SrcTexture);
 	}
 
