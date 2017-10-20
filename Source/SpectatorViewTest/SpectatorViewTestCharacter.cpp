@@ -9,6 +9,12 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 
+#include "Engine/GameEngine.h"
+#include "SGameLayerManager.h"
+#include "Slate/SceneViewport.h"
+#include "Runtime/Slate/Public/Widgets/Layout/SConstraintCanvas.h"
+#include "Runtime/Slate/Public/Widgets/SWeakWidget.h"
+
 //////////////////////////////////////////////////////////////////////////
 // ASpectatorViewTestCharacter
 
@@ -130,5 +136,52 @@ void ASpectatorViewTestCharacter::MoveRight(float Value)
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
+	}
+}
+
+
+void ASpectatorViewTestCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	TSharedRef<SWindow> SlateWinRef = SNew(SWindow)
+		.AutoCenter(EAutoCenter::None)
+		.Title(FText::FromString(TEXT("Control Window")))
+		.IsInitiallyMaximized(false)
+		.ScreenPosition(FVector2D(0, 0))
+		.ClientSize(FVector2D(500, 800))
+		.CreateTitleBar(true)
+		.SizingRule(ESizingRule::UserSized)
+		.SupportsMaximize(false)
+		.SupportsMinimize(true)
+		.HasCloseButton(true);
+
+	FSlateApplication & SlateApp = FSlateApplication::Get();
+
+	SlateApp.AddWindow(SlateWinRef, true);
+
+	if (CustomUserWidgetBP)
+	{
+		//Creating our widget and adding it to our viewport
+		CustomUserWidget = CreateWidget<UCustomUserWidget>(GetWorld(), CustomUserWidgetBP);
+
+		//CustomUserWidget->AddToViewport();
+
+		UE_LOG(LogTemp, Warning, TEXT(">>Hello Widget"));
+
+		TSharedPtr<SWidget> UserSlateWidget = CustomUserWidget->TakeWidget();
+		TSharedRef<SConstraintCanvas> ViewportWidget = SNew(SConstraintCanvas);
+
+		ViewportWidget->AddSlot()
+			[
+				UserSlateWidget.ToSharedRef()
+			];
+
+
+		ViewportWidget->SetVisibility(EVisibility::Visible);
+
+		SlateWinRef->SetContent(ViewportWidget);
+		SlateWinRef->ShowWindow();
+
 	}
 }

@@ -4,6 +4,7 @@
 #include "SpectatorWidget.h"
 #include "SpectatorGameInstance.h"
 #include "Runtime/Slate/Public/Widgets/Layout/SConstraintCanvas.h"
+#include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 
 USpectatorWidget::USpectatorWidget(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

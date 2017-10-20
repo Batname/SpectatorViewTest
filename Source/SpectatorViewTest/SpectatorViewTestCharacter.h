@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "CustomUserWidget.h"
 #include "SpectatorViewTestCharacter.generated.h"
 
 UCLASS(config=Game)
@@ -68,5 +69,16 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	virtual void BeginPlay() override;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UCustomUserWidget> CustomUserWidgetBP;
+
+	UCustomUserWidget* CustomUserWidget;
+
+	TSharedPtr<FSceneViewport> SceneViewport = nullptr;
+	TSharedPtr<SWindow> ExtraWindow = nullptr;
+	TSharedPtr<SOverlay> ViewportOverlayWidget = nullptr;
 };
 
