@@ -27,6 +27,8 @@
 /I D:\Windows\UE4\SpectatorViewTest\Plugins\SimpleHMD\Source\SimpleHMD\Private
 /I D:\Windows\UE4\SpectatorViewTest\Plugins\SimpleHMD\Source
 /I D:\Windows\UE4\SpectatorViewTest\Plugins\SimpleHMD\Source\SimpleHMD\Public
+/I D:\Windows\UE4\SpectatorViewTest\Plugins\SimpleHMD\Source\SimpleHMD\Public\SpectatorUI
+/I D:\Windows\UE4\SpectatorViewTest\Plugins\SimpleHMD\Intermediate\Build\Win64\UE4Editor\Inc\SimpleHMD
 /I D:\Windows\UE4\SpectatorViewTest\Plugins\SimpleHMD\Source\SimpleHMD
 /I "C:\Program Files\Epic Games\UE_4.17\Engine\Source\Runtime\Core\Public"
 /I "C:\Program Files\Epic Games\UE_4.17\Engine\Source\Runtime\Core\Public\Internationalization"

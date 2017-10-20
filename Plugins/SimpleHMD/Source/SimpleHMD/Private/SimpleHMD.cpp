@@ -11,6 +11,8 @@
 #include "Runtime/Renderer/Private/SceneRendering.h"
 #include "Runtime/Renderer/Private/PostProcess/PostProcessHMD.h"
 
+#include "Runtime/SlateCore/Public/Rendering/SlateRenderer.h"
+
 
 //---------------------------------------------------
 // SimpleHMD Plugin Implementation
@@ -268,6 +270,15 @@ bool FSimpleHMD::OnEndGameFrame(FWorldContext& WorldContext)
 	return true;
 }
 
+void FSimpleHMD::OnBeginPlay(FWorldContext& InWorldContext)
+{
+
+}
+void FSimpleHMD::OnEndPlay(FWorldContext& InWorldContext)
+{
+	bisRunning = false;
+}
+
 bool FSimpleHMD::IsStereoEnabled() const
 {
 	return true;
@@ -335,7 +346,6 @@ void FSimpleHMD::UpdateViewport(bool bUseSeparateRenderTarget, const class FView
 	if (CustomPresent)
 	{
 		CustomPresent->UpdateViewport(InViewport, ViewportRHI);
-		UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::UpdateViewport"));
 
 	}
 }
@@ -363,9 +373,14 @@ void FSimpleHMD::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 	if (CustomPresent)
 	{
 		CustomPresent->UpdateRenderingPose();
-		UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::BeginRenderViewFamily"));
+	}
 
 
+	if (GEngine && GEngine->GetDebugLocalPlayer() && GEngine->GetDebugLocalPlayer()->PlayerController && !bisRunning)
+	{
+		bisRunning = true;
+
+		ULocalPlayer* Player = GEngine->GetDebugLocalPlayer();
 	}
 }
 
@@ -381,8 +396,6 @@ void FSimpleHMD::PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHIC
 	if (CustomPresent)
 	{
 		CustomPresent->BeginRendering();
-		UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::PreRenderViewFamily_RenderThread"));
-
 	}
 }
 
@@ -392,7 +405,8 @@ FSimpleHMD::FSimpleHMD() :
 	DeltaControlRotation(FRotator::ZeroRotator),
 	DeltaControlOrientation(FQuat::Identity),
 	LastSensorTime(-1.0),
-	CustomPresent(nullptr)
+	CustomPresent(nullptr),
+	bisRunning(false)
 {
 
 	CustomPresent = new FSimpleHMDCustomPresent(this);

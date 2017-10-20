@@ -9,6 +9,10 @@
 #include "Runtime/Engine/Public/IStereoLayers.h"
 #include "Runtime/RHI/Public/RHIResources.h"
 
+#include "Slate/SGameLayerManager.h"
+#include "Slate/SceneViewport.h"
+#include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
+#include "Runtime/Slate/Public/Widgets/SViewport.h"
 
 class APlayerController;
 class FSceneView;
@@ -137,6 +141,9 @@ public:
 
 	virtual bool OnEndGameFrame(FWorldContext& WorldContext) override;
 
+	virtual void OnBeginPlay(FWorldContext& InWorldContext) override;
+	virtual void OnEndPlay(FWorldContext& InWorldContext) override;
+
 	/** IStereoRendering interface */
 	virtual bool IsStereoEnabled() const override;
 	virtual bool EnableStereo(bool stereo = true) override;
@@ -206,5 +213,9 @@ private:
 
 public:
 	FSimpleHMDCustomPresent* CustomPresent;
+
+// Custom code
+private:
+	bool bisRunning;
 };
 
