@@ -71,6 +71,7 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UCustomUserWidget> CustomUserWidgetBP;
@@ -80,5 +81,7 @@ public:
 	TSharedPtr<FSceneViewport> SceneViewport = nullptr;
 	TSharedPtr<SWindow> ExtraWindow = nullptr;
 	TSharedPtr<SOverlay> ViewportOverlayWidget = nullptr;
+
+	bool StandaloneGame = false;
 };
 

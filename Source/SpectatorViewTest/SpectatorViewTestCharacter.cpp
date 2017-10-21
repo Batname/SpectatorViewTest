@@ -14,6 +14,7 @@
 #include "Slate/SceneViewport.h"
 #include "Runtime/Slate/Public/Widgets/Layout/SConstraintCanvas.h"
 #include "Runtime/Slate/Public/Widgets/SWeakWidget.h"
+#include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ASpectatorViewTestCharacter
@@ -144,21 +145,27 @@ void ASpectatorViewTestCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	TSharedRef<SWindow> SlateWinRef = SNew(SWindow)
+	if (this->GetWorld()->WorldType == EWorldType::Game)
+		StandaloneGame = true;
+	else
+		StandaloneGame = false;
+
+	ExtraWindow = SNew(SWindow)
 		.AutoCenter(EAutoCenter::None)
 		.Title(FText::FromString(TEXT("Control Window")))
 		.IsInitiallyMaximized(false)
 		.ScreenPosition(FVector2D(0, 0))
-		.ClientSize(FVector2D(500, 800))
+		.ClientSize(FVector2D(1920, 1080))
 		.CreateTitleBar(true)
 		.SizingRule(ESizingRule::UserSized)
 		.SupportsMaximize(false)
 		.SupportsMinimize(true)
-		.HasCloseButton(true);
+		.HasCloseButton(true)
+		.UseOSWindowBorder(false);
 
 	FSlateApplication & SlateApp = FSlateApplication::Get();
 
-	SlateApp.AddWindow(SlateWinRef, true);
+	SlateApp.AddWindow(ExtraWindow.ToSharedRef(), true);
 
 	if (CustomUserWidgetBP)
 	{
@@ -166,8 +173,6 @@ void ASpectatorViewTestCharacter::BeginPlay()
 		CustomUserWidget = CreateWidget<UCustomUserWidget>(GetWorld(), CustomUserWidgetBP);
 
 		//CustomUserWidget->AddToViewport();
-
-		UE_LOG(LogTemp, Warning, TEXT(">>Hello Widget"));
 
 		TSharedPtr<SWidget> UserSlateWidget = CustomUserWidget->TakeWidget();
 		TSharedRef<SConstraintCanvas> ViewportWidget = SNew(SConstraintCanvas);
@@ -180,8 +185,21 @@ void ASpectatorViewTestCharacter::BeginPlay()
 
 		ViewportWidget->SetVisibility(EVisibility::Visible);
 
-		SlateWinRef->SetContent(ViewportWidget);
-		SlateWinRef->ShowWindow();
+		ExtraWindow->SetContent(ViewportWidget);
+		ExtraWindow->ShowWindow();
 
+	}
+}
+
+void ASpectatorViewTestCharacter::BeginDestroy()
+{
+	Super::BeginDestroy();
+
+	if (ExtraWindow.Get() != nullptr)
+	{
+		if (StandaloneGame == false)
+			ExtraWindow->RequestDestroyWindow();
+		else
+			ExtraWindow->DestroyWindowImmediately();
 	}
 }
