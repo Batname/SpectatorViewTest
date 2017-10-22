@@ -145,6 +145,8 @@ void ASpectatorViewTestCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	return;
+
 	if (this->GetWorld()->WorldType == EWorldType::Game)
 		StandaloneGame = true;
 	else
@@ -194,6 +196,8 @@ void ASpectatorViewTestCharacter::BeginPlay()
 void ASpectatorViewTestCharacter::BeginDestroy()
 {
 	Super::BeginDestroy();
+
+	return;
 
 	if (ExtraWindow.Get() != nullptr)
 	{

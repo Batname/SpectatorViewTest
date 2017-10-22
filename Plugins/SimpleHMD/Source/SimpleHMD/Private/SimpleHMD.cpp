@@ -276,7 +276,15 @@ void FSimpleHMD::OnBeginPlay(FWorldContext& InWorldContext)
 }
 void FSimpleHMD::OnEndPlay(FWorldContext& InWorldContext)
 {
-	bisRunning = false;
+	bIsRunning = false;
+	// close the window
+	if (ExtraWindow.Get() != nullptr)
+	{
+		if (StandaloneGame == false)
+			ExtraWindow->RequestDestroyWindow();
+		else
+			ExtraWindow->DestroyWindowImmediately();
+	}
 }
 
 bool FSimpleHMD::IsStereoEnabled() const
@@ -335,28 +343,158 @@ void FSimpleHMD::InitCanvasFromView(FSceneView* InView, UCanvas* Canvas)
 
 void FSimpleHMD::GetEyeRenderParams_RenderThread(const FRenderingCompositePassContext& Context, FVector2D& EyeToSrcUVScaleValue, FVector2D& EyeToSrcUVOffsetValue) const
 {
-	EyeToSrcUVOffsetValue = FVector2D::ZeroVector;
-	EyeToSrcUVScaleValue = FVector2D(1.0f, 1.0f);
+	if (Context.View.StereoPass == eSSP_LEFT_EYE)
+	{
+		EyeToSrcUVOffsetValue.X = 0.0f;
+		EyeToSrcUVOffsetValue.Y = 0.0f;
+
+		EyeToSrcUVScaleValue.X = 0.5f;
+		EyeToSrcUVScaleValue.Y = 1.0f;
+	}
+	else
+	{
+		EyeToSrcUVOffsetValue.X = 0.5f;
+		EyeToSrcUVOffsetValue.Y = 0.0f;
+
+		EyeToSrcUVScaleValue.X = 0.5f;
+		EyeToSrcUVScaleValue.Y = 1.0f;
+	}
+}
+
+void FSimpleHMD::CalculateRenderTargetSize(const FViewport& Viewport, uint32& InOutSizeX, uint32& InOutSizeY)
+{
+	check(IsInGameThread());
+
+	{
+		static const auto CVar = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("r.ScreenPercentage"));
+		float value = CVar->GetValueOnGameThread();
+		if (value > 0.0f)
+		{
+			InOutSizeX = FMath::CeilToInt(InOutSizeX * value / 100.f);
+			InOutSizeY = FMath::CeilToInt(InOutSizeY * value / 100.f);
+		}
+	}
+}
+
+bool FSimpleHMD::NeedReAllocateViewportRenderTarget(const FViewport& Viewport)
+{
+	//check(IsInGameThread());
+
+	//UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::NeedReAllocateViewportRenderTarget"));
+
+
+	//if (IsStereoEnabled())
+	//{
+	//	const uint32 InSizeX = Viewport.GetSizeXY().X;
+	//	const uint32 InSizeY = Viewport.GetSizeXY().Y;
+	//	FIntPoint RenderTargetSize;
+	//	RenderTargetSize.X = Viewport.GetRenderTargetTexture()->GetSizeX();
+	//	RenderTargetSize.Y = Viewport.GetRenderTargetTexture()->GetSizeY();
+
+	//	uint32 NewSizeX = InSizeX, NewSizeY = InSizeY;
+	//	CalculateRenderTargetSize(Viewport, NewSizeX, NewSizeY);
+	//	if (NewSizeX != RenderTargetSize.X || NewSizeY != RenderTargetSize.Y)
+	//	{
+	//		return true;
+	//	}
+	//}
+	return false;
+}
+
+bool FSimpleHMD::ShouldUseSeparateRenderTarget() const
+{
+	check(IsInGameThread());
+	return IsStereoEnabled();
 }
 
 void FSimpleHMD::UpdateViewport(bool bUseSeparateRenderTarget, const class FViewport& InViewport, class SViewport* ViewportWidget)
 {
+	UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::UpdateViewport"));
+
+	check(IsInGameThread());
+
+	if (GIsEditor && ViewportWidget)
+	{
+		if (!ViewportWidget->IsStereoRenderingAllowed())
+		{
+			return;
+		}
+	}
+
 	FRHIViewport* const ViewportRHI = InViewport.GetViewportRHI().GetReference();
+	if (!ViewportRHI)
+	{
+		return;
+	}
+
+	if (!IsStereoEnabled())
+	{
+		if ((!bUseSeparateRenderTarget || GIsEditor) && ViewportRHI)
+		{
+			ViewportRHI->SetCustomPresent(nullptr);
+		}
+		return;
+	}
 
 	if (CustomPresent)
 	{
 		CustomPresent->UpdateViewport(InViewport, ViewportRHI);
+	}
 
+	if (!bIsRunning)
+	{
+		bIsRunning = true;
+		UE_LOG(LogHMD, Error, TEXT("bIsRunning"));
+
+		// Create window here
+		ExtraWindow = SNew(SWindow)
+			.ClientSize(FVector2D(1200, 800));
+
+		TSharedRef<SWindow> SlateWinRef = ExtraWindow.ToSharedRef();
+		FSlateApplication & SlateApp = FSlateApplication::Get();
+		SlateApp.AddWindow(SlateWinRef, true);
+
+		//---------------- create viewport
+		ViewportOverlayWidget = SNew(SOverlay);
+		TSharedRef<SGameLayerManager> LayerManagerRef = SNew(SGameLayerManager)
+			.SceneViewport(GEngine->GameViewport->GetGameViewport())
+			.Visibility(EVisibility::Visible)
+			.Cursor(EMouseCursor::None)
+			[
+				ViewportOverlayWidget.ToSharedRef()
+			];
+
+		MyViewport = SNew(SViewport)
+			.RenderDirectlyToWindow(false) // true crashes some stuff because HMDs need the rendertarget tex for distortion etc..
+			.EnableGammaCorrection(false)
+			.EnableStereoRendering(false) // not displaying on an HMD
+			.Cursor(EMouseCursor::None)
+			[
+				LayerManagerRef
+			];
+		//---------------- create viewport
+
+		FSceneViewport* SceneVP = GEngine->GameViewport->GetGameViewport();
+		SceneViewport = MakeShareable(SceneVP, [](FSceneViewport* SceneVP)
+		{
+			UE_LOG(LogHMD, Error, TEXT("MakeShareable DELETE"));
+		});
+		MyViewport->SetViewportInterface(SceneViewport.ToSharedRef());
+		ExtraWindow->SetContent(MyViewport.ToSharedRef());
+
+		ExtraWindow->ShowWindow();
+
+		if (GWorld->WorldType == EWorldType::Game)
+			StandaloneGame = true;
+		else
+			StandaloneGame = false;
 	}
 }
-
-
 
 void FSimpleHMD::SetupViewFamily(FSceneViewFamily& InViewFamily)
 {
 	InViewFamily.EngineShowFlags.MotionBlur = 0;
-	InViewFamily.EngineShowFlags.HMDDistortion = true;
-	InViewFamily.EngineShowFlags.SetScreenPercentage(true);
+	InViewFamily.EngineShowFlags.HMDDistortion = false;
 	InViewFamily.EngineShowFlags.StereoRendering = IsStereoEnabled();
 }
 
@@ -364,7 +502,6 @@ void FSimpleHMD::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView)
 {
 	InView.BaseHmdOrientation = FQuat(FRotator(0.0f, 0.0f, 0.0f));
 	InView.BaseHmdLocation = FVector(0.f);
-	//	WorldToMetersScale = InView.WorldToMetersScale;
 	InViewFamily.bUseSeparateRenderTarget = false;
 }
 
@@ -373,14 +510,6 @@ void FSimpleHMD::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 	if (CustomPresent)
 	{
 		CustomPresent->UpdateRenderingPose();
-	}
-
-
-	if (GEngine && GEngine->GetDebugLocalPlayer() && GEngine->GetDebugLocalPlayer()->PlayerController && !bisRunning)
-	{
-		bisRunning = true;
-
-		ULocalPlayer* Player = GEngine->GetDebugLocalPlayer();
 	}
 }
 
@@ -397,6 +526,10 @@ void FSimpleHMD::PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHIC
 	{
 		CustomPresent->BeginRendering();
 	}
+
+	// BAT
+	check(SpectatorScreenController);
+	SpectatorScreenController->UpdateSpectatorScreenMode_RenderThread();
 }
 
 FSimpleHMD::FSimpleHMD() :
@@ -406,7 +539,8 @@ FSimpleHMD::FSimpleHMD() :
 	DeltaControlOrientation(FQuat::Identity),
 	LastSensorTime(-1.0),
 	CustomPresent(nullptr),
-	bisRunning(false)
+	bIsRunning(false),
+	ExtraWindow(nullptr)
 {
 
 	CustomPresent = new FSimpleHMDCustomPresent(this);
@@ -425,5 +559,12 @@ FSimpleHMD::~FSimpleHMD()
 
 bool FSimpleHMD::IsInitialized()
 {
+	// grab a pointer to the renderer module for displaying our mirror window
+	static const FName RendererModuleName("Renderer");
+	RendererModule = FModuleManager::GetModulePtr<IRendererModule>(RendererModuleName);
+
+	// BAT
+	CreateSpectatorScreenController();
+
 	return true;
 }

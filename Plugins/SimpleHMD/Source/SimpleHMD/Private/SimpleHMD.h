@@ -14,11 +14,21 @@
 #include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
 #include "Runtime/Slate/Public/Widgets/SViewport.h"
 
+// Bat
+#include "Engine/GameEngine.h"
+#include "SGameLayerManager.h"
+#include "Slate/SceneViewport.h"
+#include "Runtime/Slate/Public/Widgets/Layout/SConstraintCanvas.h"
+#include "Runtime/Slate/Public/Widgets/SWeakWidget.h"
+#include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
+#include "Runtime/RenderCore/Public/RendererInterface.h"
+
 class APlayerController;
 class FSceneView;
 class FSceneViewFamily;
 class UCanvas;
 class FSimpleHMD;
+class IRendererModule;
 
 
 
@@ -154,12 +164,12 @@ public:
 	virtual void InitCanvasFromView(FSceneView* InView, UCanvas* Canvas) override;
 	virtual void GetEyeRenderParams_RenderThread(const struct FRenderingCompositePassContext& Context, FVector2D& EyeToSrcUVScaleValue, FVector2D& EyeToSrcUVOffsetValue) const override;
 
-	virtual bool NeedReAllocateViewportRenderTarget(const FViewport& Viewport) override { return false; }
-	virtual bool ShouldUseSeparateRenderTarget() const override { return false; }
-	virtual void RenderTexture_RenderThread(class FRHICommandListImmediate& RHICmdList, class FRHITexture2D* BackBuffer, class FRHITexture2D* SrcTexture) const override {}
+	virtual bool NeedReAllocateViewportRenderTarget(const FViewport& Viewport) override;
+	virtual bool ShouldUseSeparateRenderTarget() const override;
 	virtual bool AllocateRenderTargetTexture(uint32 Index, uint32 SizeX, uint32 SizeY, uint8 Format, uint32 NumMips, uint32 InTexFlags, uint32 InTargetableTextureFlags, FTexture2DRHIRef& OutTargetableTexture, FTexture2DRHIRef& OutShaderResourceTexture, uint32 NumSamples = 1) override { return false; }
-	virtual void CalculateRenderTargetSize(const FViewport& Viewport, uint32& InOutSizeX, uint32& InOutSizeY) override {}
+	virtual void CalculateRenderTargetSize(const FViewport& Viewport, uint32& InOutSizeX, uint32& InOutSizeY) override;
 	virtual void UpdateViewport(bool bUseSeparateRenderTarget, const class FViewport& Viewport, class SViewport* = nullptr) override;
+	virtual void RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef BackBuffer, FTexture2DRHIParamRef SrcTexture) const override;
 
 
 
@@ -201,21 +211,29 @@ private:
 
 	void GetCurrentPose(FQuat& CurrentOrientation);
 
-	// Spectator Screen
-public:
-	virtual FIntRect GetFullFlatEyeRect(FTexture2DRHIRef EyeTexture) const override;
-	virtual void CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef SrcTexture, FIntRect SrcRect, FTexture2DRHIParamRef DstTexture, FIntRect DstRect, bool bClearBlack) const override;
-	ESpectatorScreenMode GetSpectatorScreenMode() const;
-
-private:
-	void CreateSpectatorScreenController();
-	bool ShouldDisableHiddenAndVisibileAreaMeshForSpectatorScreen_RenderThread() const;
-
 public:
 	FSimpleHMDCustomPresent* CustomPresent;
 
-// Custom code
+// BAT
+public:
+	bool bIsRunning;
+
+	TSharedPtr<FSceneViewport> SceneViewport = nullptr;
+	TSharedPtr<SWindow> ExtraWindow = nullptr;
+	TSharedPtr<SOverlay> ViewportOverlayWidget = nullptr;
+	TSharedPtr<SViewport> MyViewport = nullptr;
+
+	bool StandaloneGame = false;
+
+	IRendererModule* RendererModule;
+
+
+// SpectatorScreen
 private:
-	bool bisRunning;
+	void CreateSpectatorScreenController();
+public:
+	virtual FIntRect GetFullFlatEyeRect(FTexture2DRHIRef EyeTexture) const override;
+	virtual void CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef SrcTexture, FIntRect SrcRect, FTexture2DRHIParamRef DstTexture, FIntRect DstRect, bool bClearBlack) const override;
+
 };
 

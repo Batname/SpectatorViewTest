@@ -16,17 +16,19 @@ namespace UnrealBuildTool.Rules
 			PrivateDependencyModuleNames.AddRange(
 				new string[]
 				{
-					"Core",
-					"CoreUObject",
-					"Engine",
-					"InputCore",
-					"RHI",
-					"RenderCore",
-					"Renderer",
-					"ShaderCore",
-					"HeadMountedDisplay",
+                    "Core",
+                    "CoreUObject",
+                    "Engine",
+                    "RHI",
+                    "RenderCore",
+                    "UtilityShaders",
+                    "Renderer",
+                    "ShaderCore",
+                    "InputCore",
+                    "HeadMountedDisplay",
                     "Slate",
                     "SlateCore",
+                    "ProceduralMeshComponent",
                     "UMG"
                 }
 				);

@@ -82,6 +82,7 @@ public:
 	TSharedPtr<SWindow> ExtraWindow = nullptr;
 	TSharedPtr<SOverlay> ViewportOverlayWidget = nullptr;
 
+
 	bool StandaloneGame = false;
 };
 
