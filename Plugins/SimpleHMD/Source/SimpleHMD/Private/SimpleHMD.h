@@ -219,10 +219,15 @@ public:
 public:
 	bool bIsRunning;
 
-	TSharedPtr<FSceneViewport> SceneViewport = nullptr;
-	TSharedPtr<SWindow> ExtraWindow = nullptr;
-	TSharedPtr<SOverlay> ViewportOverlayWidget = nullptr;
-	TSharedPtr<SViewport> MyViewport = nullptr;
+	TSharedPtr<FSceneViewport> SceneViewport1 = nullptr;
+	TSharedPtr<SWindow> ExtraWindow1 = nullptr;
+	TSharedPtr<SOverlay> ViewportOverlayWidget1 = nullptr;
+	TSharedPtr<SViewport> MyViewport1 = nullptr;
+
+	TSharedPtr<FSceneViewport> SceneViewport2 = nullptr;
+	TSharedPtr<SWindow> ExtraWindow2 = nullptr;
+	TSharedPtr<SOverlay> ViewportOverlayWidget2 = nullptr;
+	TSharedPtr<SViewport> MyViewport2 = nullptr;
 
 	bool StandaloneGame = false;
 

@@ -298,12 +298,20 @@ void FSimpleHMD::OnEndPlay(FWorldContext& InWorldContext)
 {
 	bIsRunning = false;
 	// close the window
-	if (ExtraWindow.Get() != nullptr)
+	if (ExtraWindow1.Get() != nullptr)
 	{
 		if (StandaloneGame == false)
-			ExtraWindow->RequestDestroyWindow();
+			ExtraWindow1->RequestDestroyWindow();
 		else
-			ExtraWindow->DestroyWindowImmediately();
+			ExtraWindow1->DestroyWindowImmediately();
+	}
+
+	if (ExtraWindow2.Get() != nullptr)
+	{
+		if (StandaloneGame == false)
+			ExtraWindow2->RequestDestroyWindow();
+		else
+			ExtraWindow2->DestroyWindowImmediately();
 	}
 }
 
@@ -516,43 +524,88 @@ void FSimpleHMD::UpdateViewport(bool bUseSeparateRenderTarget, const class FView
 		bIsRunning = true;
 		UE_LOG(LogHMD, Error, TEXT("bIsRunning"));
 
-		// Create window here
-		ExtraWindow = SNew(SWindow)
-			.ClientSize(FVector2D(1200, 800));
-
-		TSharedRef<SWindow> SlateWinRef = ExtraWindow.ToSharedRef();
-		FSlateApplication & SlateApp = FSlateApplication::Get();
-		SlateApp.AddWindow(SlateWinRef, true);
-
-		//---------------- create viewport
-		ViewportOverlayWidget = SNew(SOverlay);
-		TSharedRef<SGameLayerManager> LayerManagerRef = SNew(SGameLayerManager)
-			.SceneViewport(GEngine->GameViewport->GetGameViewport())
-			.Visibility(EVisibility::Visible)
-			.Cursor(EMouseCursor::None)
-			[
-				ViewportOverlayWidget.ToSharedRef()
-			];
-
-		MyViewport = SNew(SViewport)
-			.RenderDirectlyToWindow(false) // true crashes some stuff because HMDs need the rendertarget tex for distortion etc..
-			.EnableGammaCorrection(false)
-			.EnableStereoRendering(false) // not displaying on an HMD
-			.Cursor(EMouseCursor::None)
-			[
-				LayerManagerRef
-			];
-		//---------------- create viewport
-
-		FSceneViewport* SceneVP = GEngine->GameViewport->GetGameViewport();
-		SceneViewport = MakeShareable(SceneVP, [](FSceneViewport* SceneVP)
+		//---------------------------------------------- WINDOW 1
 		{
-			UE_LOG(LogHMD, Error, TEXT("MakeShareable DELETE"));
-		});
-		MyViewport->SetViewportInterface(SceneViewport.ToSharedRef());
-		ExtraWindow->SetContent(MyViewport.ToSharedRef());
+			ExtraWindow1 = SNew(SWindow)
+				.ClientSize(FVector2D(1200, 800));
 
-		ExtraWindow->ShowWindow();
+			TSharedRef<SWindow> SlateWinRef = ExtraWindow1.ToSharedRef();
+			FSlateApplication & SlateApp = FSlateApplication::Get();
+			SlateApp.AddWindow(SlateWinRef, true);
+
+			//---------------- create viewport
+			ViewportOverlayWidget1 = SNew(SOverlay);
+			TSharedRef<SGameLayerManager> LayerManagerRef = SNew(SGameLayerManager)
+				.SceneViewport(GEngine->GameViewport->GetGameViewport())
+				.Visibility(EVisibility::Visible)
+				.Cursor(EMouseCursor::None)
+				[
+					ViewportOverlayWidget1.ToSharedRef()
+				];
+
+			MyViewport1 = SNew(SViewport)
+				.RenderDirectlyToWindow(false) // true crashes some stuff because HMDs need the rendertarget tex for distortion etc..
+				.EnableGammaCorrection(false)
+				.EnableStereoRendering(false) // not displaying on an HMD
+				.Cursor(EMouseCursor::None)
+				[
+					LayerManagerRef
+				];
+			//---------------- create viewport
+
+			FSceneViewport* SceneVP = GEngine->GameViewport->GetGameViewport();
+			SceneViewport1 = MakeShareable(SceneVP, [](FSceneViewport* SceneVP)
+			{
+				UE_LOG(LogHMD, Error, TEXT("MakeShareable DELETE"));
+			});
+			MyViewport1->SetViewportInterface(SceneViewport1.ToSharedRef());
+			ExtraWindow1->SetContent(MyViewport1.ToSharedRef());
+
+			ExtraWindow1->ShowWindow();
+		}
+		//---------------------------------------------- WINDOW 1
+
+
+		//---------------------------------------------- WINDOW 2
+		{
+			ExtraWindow2 = SNew(SWindow)
+				.ClientSize(FVector2D(1200, 800));
+
+			TSharedRef<SWindow> SlateWinRef = ExtraWindow2.ToSharedRef();
+			FSlateApplication & SlateApp = FSlateApplication::Get();
+			SlateApp.AddWindow(SlateWinRef, true);
+
+			//---------------- create viewport
+			ViewportOverlayWidget2 = SNew(SOverlay);
+			TSharedRef<SGameLayerManager> LayerManagerRef = SNew(SGameLayerManager)
+				.SceneViewport(GEngine->GameViewport->GetGameViewport())
+				.Visibility(EVisibility::Visible)
+				.Cursor(EMouseCursor::None)
+				[
+					ViewportOverlayWidget2.ToSharedRef()
+				];
+
+			MyViewport2 = SNew(SViewport)
+				.RenderDirectlyToWindow(false) // true crashes some stuff because HMDs need the rendertarget tex for distortion etc..
+				.EnableGammaCorrection(false)
+				.EnableStereoRendering(false) // not displaying on an HMD
+				.Cursor(EMouseCursor::None)
+				[
+					LayerManagerRef
+				];
+			//---------------- create viewport
+
+			FSceneViewport* SceneVP = GEngine->GameViewport->GetGameViewport();
+			SceneViewport2 = MakeShareable(SceneVP, [](FSceneViewport* SceneVP)
+			{
+				UE_LOG(LogHMD, Error, TEXT("MakeShareable DELETE"));
+			});
+			MyViewport2->SetViewportInterface(SceneViewport2.ToSharedRef());
+			ExtraWindow2->SetContent(MyViewport2.ToSharedRef());
+
+			ExtraWindow2->ShowWindow();
+		}
+		//---------------------------------------------- WINDOW 1
 
 		if (GWorld->WorldType == EWorldType::Game)
 			StandaloneGame = true;
@@ -610,7 +663,8 @@ FSimpleHMD::FSimpleHMD() :
 	LastSensorTime(-1.0),
 	CustomPresent(nullptr),
 	bIsRunning(false),
-	ExtraWindow(nullptr),
+	ExtraWindow1(nullptr),
+	ExtraWindow2(nullptr),
 	bStereoDesired(false),
 	bStereoEnabled(false)
 {

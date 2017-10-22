@@ -81,7 +81,7 @@ public:
 	TSharedPtr<FSceneViewport> SceneViewport = nullptr;
 	TSharedPtr<SWindow> ExtraWindow = nullptr;
 	TSharedPtr<SOverlay> ViewportOverlayWidget = nullptr;
-
+	TSharedPtr<SViewport> MyViewport = nullptr;
 
 	bool StandaloneGame = false;
 };

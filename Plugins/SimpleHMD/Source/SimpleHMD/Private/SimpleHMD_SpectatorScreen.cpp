@@ -12,31 +12,28 @@ void FSimpleHMD::CreateSpectatorScreenController()
 	SpectatorScreenController = MakeUnique<FDefaultSpectatorScreenController>(this);
 }
 
+// Call
 void FSimpleHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef BackBuffer, FTexture2DRHIParamRef SrcTexture) const
 {
-	UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::RenderTexture_RenderThread"));
-
 	// BAT
 	check(IsInRenderingThread());
 	check(SpectatorScreenController);
 	SpectatorScreenController->RenderSpectatorScreen_RenderThread(RHICmdList, BackBuffer, SrcTexture);
 }
 
+// Call
 FIntRect FSimpleHMD::GetFullFlatEyeRect(FTexture2DRHIRef EyeTexture) const
 {
-	UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::GetFullFlatEyeRect"));
-
-	check(IsInRenderingThread());
-	static FVector2D SrcNormRectMin(0.125f, 0.2f);
-	static FVector2D SrcNormRectMax(0.375f, 0.8f);
-	return FIntRect(EyeTexture->GetSizeX() * SrcNormRectMin.X, EyeTexture->GetSizeY() * SrcNormRectMin.Y, EyeTexture->GetSizeX() * SrcNormRectMax.X, EyeTexture->GetSizeY() * SrcNormRectMax.Y);
+	//check(IsInRenderingThread());
+	//static FVector2D SrcNormRectMin(0.125f, 0.2f);
+	//static FVector2D SrcNormRectMax(0.375f, 0.8f);
+	//return FIntRect(EyeTexture->GetSizeX() * SrcNormRectMin.X, EyeTexture->GetSizeY() * SrcNormRectMin.Y, EyeTexture->GetSizeX() * SrcNormRectMax.X, EyeTexture->GetSizeY() * SrcNormRectMax.Y);
+	return FIntRect(0, 0, EyeTexture->GetSizeX(), EyeTexture->GetSizeY());
 }
 
+// Call
 void FSimpleHMD::CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef SrcTexture, FIntRect SrcRect, FTexture2DRHIParamRef DstTexture, FIntRect DstRect, bool bClearBlack) const
 {
-	UE_LOG(LogTemp, Warning, TEXT("FSimpleHMD::CopyTexture_RenderThread"));
-
-
 	check(IsInRenderingThread());
 
 	const uint32 ViewportWidth = DstRect.Width();
