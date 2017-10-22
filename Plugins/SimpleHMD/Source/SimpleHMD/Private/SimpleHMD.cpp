@@ -12,6 +12,26 @@
 #include "Runtime/Renderer/Private/PostProcess/PostProcessHMD.h"
 
 #include "Runtime/SlateCore/Public/Rendering/SlateRenderer.h"
+#include "Runtime/Engine/Public/UnrealEngine.h"
+
+/** Helper function for acquiring the appropriate FSceneViewport */
+FSceneViewport* FindSceneViewport()
+{
+	if (!GIsEditor)
+	{
+		UGameEngine* GameEngine = Cast<UGameEngine>(GEngine);
+		return GameEngine->SceneViewport.Get();
+	}
+	return nullptr;
+}
+
+void FSimpleHMD::GetWindowBounds(int32* X, int32* Y, uint32* Width, uint32* Height)
+{
+	*X = 0;
+	*Y = 0;
+	*Width = 1920;
+	*Height = 1080;
+}
 
 
 //---------------------------------------------------
@@ -294,7 +314,57 @@ bool FSimpleHMD::IsStereoEnabled() const
 
 bool FSimpleHMD::EnableStereo(bool stereo)
 {
-	return true;
+	// Set the viewport to match that of the HMD display
+	//FSceneViewport* SceneVP = FindSceneViewport();
+	FSceneViewport* SceneVP = GEngine->GameViewport->GetGameViewport();
+	UE_LOG(LogHMD, Error, TEXT("FSimpleHMD::EnableStereo %p"), SceneVP);
+
+	if (SceneVP)
+	{
+		TSharedPtr<SWindow> Window = SceneVP->FindWindow();
+		if (Window.IsValid() && SceneVP->GetViewportWidget().IsValid())
+		{
+			int32 ResX = 2160;
+			int32 ResY = 1200;
+
+			MonitorInfo MonitorDesc;
+			if (GetHMDMonitorInfo(MonitorDesc))
+			{
+				ResX = MonitorDesc.ResolutionX;
+				ResY = MonitorDesc.ResolutionY;
+			}
+			FSystemResolution::RequestResolutionChange(ResX, ResY, EWindowMode::WindowedFullscreen);
+
+			if (stereo)
+			{
+				int32 PosX, PosY;
+				uint32 Width, Height;
+				GetWindowBounds(&PosX, &PosY, &Width, &Height);
+				SceneVP->SetViewportSize(Width, Height);
+				bStereoEnabled = bStereoDesired;
+			}
+			else
+			{
+				// Note: Setting before resize to ensure we don't try to allocate a new vr rt.
+				bStereoEnabled = bStereoDesired;
+
+				FRHIViewport* const ViewportRHI = SceneVP->GetViewportRHI();
+				if (ViewportRHI != nullptr)
+				{
+					ViewportRHI->SetCustomPresent(nullptr);
+				}
+
+				FVector2D size = SceneVP->FindWindow()->GetSizeInScreen();
+				SceneVP->SetViewportSize(size.X, size.Y);
+				Window->SetViewportSizeDrivenByWindow(true);
+			}
+		}
+	}
+
+	// Uncap fps to enable FPS higher than 62
+	GEngine->bForceDisableFrameRateSmoothing = bStereoEnabled;
+
+	return bStereoEnabled;
 }
 
 void FSimpleHMD::AdjustViewRect(EStereoscopicPass StereoPass, int32& X, int32& Y, uint32& SizeX, uint32& SizeY) const
@@ -540,7 +610,9 @@ FSimpleHMD::FSimpleHMD() :
 	LastSensorTime(-1.0),
 	CustomPresent(nullptr),
 	bIsRunning(false),
-	ExtraWindow(nullptr)
+	ExtraWindow(nullptr),
+	bStereoDesired(false),
+	bStereoEnabled(false)
 {
 
 	CustomPresent = new FSimpleHMDCustomPresent(this);

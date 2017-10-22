@@ -154,6 +154,7 @@ public:
 	virtual void OnBeginPlay(FWorldContext& InWorldContext) override;
 	virtual void OnEndPlay(FWorldContext& InWorldContext) override;
 
+
 	/** IStereoRendering interface */
 	virtual bool IsStereoEnabled() const override;
 	virtual bool EnableStereo(bool stereo = true) override;
@@ -235,5 +236,10 @@ public:
 	virtual FIntRect GetFullFlatEyeRect(FTexture2DRHIRef EyeTexture) const override;
 	virtual void CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef SrcTexture, FIntRect SrcRect, FTexture2DRHIParamRef DstTexture, FIntRect DstRect, bool bClearBlack) const override;
 
+
+// Steam
+	void GetWindowBounds(int32* X, int32* Y, uint32* Width, uint32* Height);
+	bool bStereoDesired;
+	bool bStereoEnabled;
 };
 
